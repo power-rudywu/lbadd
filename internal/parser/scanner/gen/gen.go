@@ -1,12 +1,15 @@
-package scanner
+package gen
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"time"
 	"unicode"
 
 	"github.com/tomarrell/lbadd/internal/parser/scanner/token"
+	"gopkg.in/yaml.v2"
 )
 
 var _ token.Token = (*genTok)(nil)
@@ -1451,7 +1454,7 @@ func generateScannerInputAndExpectedOutput() (scannerInput string, scannerOutput
 	for i := 0; i < amountOfTokens; i++ {
 		// generate token
 		tok := generateToken(currentOffset)
-		currentOffset += tok.Length() - 1
+		currentOffset += tok.Length()
 
 		// append to results
 		buf.WriteString(tok.Value())
@@ -1470,4 +1473,82 @@ func generateScannerInputAndExpectedOutput() (scannerInput string, scannerOutput
 
 	scannerInput = buf.String()
 	return
+}
+
+type TestCase struct {
+	Input  string      `yaml:"input"`
+	Output []TestToken `yaml:"output"`
+}
+
+func From(filename string) TestCase {
+	var tc TestCase
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	err = yaml.Unmarshal(data, &tc)
+	if err != nil {
+		panic(err)
+	}
+
+	return tc
+}
+
+var _ token.Token = (*TestToken)(nil)
+
+type TestToken struct {
+	TokenLine   int    `yaml:"line"`
+	TokenCol    int    `yaml:"col"`
+	TokenOffset int    `yaml:"offset"`
+	TokenLength int    `yaml:"length"`
+	TokenType   uint16 `yaml:"type"`
+	TokenValue  string `yaml:"value"`
+}
+
+func (t TestToken) Line() int {
+	return t.TokenLine
+}
+
+func (t TestToken) Col() int {
+	return t.TokenCol
+}
+
+func (t TestToken) Offset() int {
+	return t.TokenOffset
+}
+
+func (t TestToken) Length() int {
+	return t.TokenLength
+}
+
+func (t TestToken) Type() token.Type {
+	return token.Type(t.TokenType)
+}
+
+func (t TestToken) Value() string {
+	return t.TokenValue
+}
+
+func (t TestToken) String() string {
+	return fmt.Sprintf("%s(%s)", token.Type(t.TokenType).String(), t.Value())
+}
+
+func generateTestCase(scIn string, scOut []token.Token) TestCase {
+	tc := TestCase{
+		Input:  scIn,
+		Output: []TestToken{},
+	}
+	for _, tk := range scOut {
+		tc.Output = append(tc.Output, TestToken{
+			TokenLine:   tk.Line(),
+			TokenCol:    tk.Col(),
+			TokenOffset: tk.Offset(),
+			TokenLength: tk.Length(),
+			TokenType:   uint16(tk.Type()),
+			TokenValue:  tk.Value(),
+		})
+	}
+	return tc
 }

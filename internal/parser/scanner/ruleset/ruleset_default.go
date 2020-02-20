@@ -2,6 +2,7 @@ package ruleset
 
 import (
 	"bytes"
+	"strings"
 	"unicode"
 
 	"github.com/tomarrell/lbadd/internal/parser/scanner/matcher"
@@ -56,7 +57,7 @@ func defaultKeywordsRule(s RuneScanner) (token.Type, bool) {
 	candidate := buf.String() // candidate is the next word that may be a keyword
 
 	// check if the candidate is a keyword
-	if typ, ok := defaultKeywords[candidate]; ok {
+	if typ, ok := defaultKeywords[strings.ToUpper(candidate)]; ok {
 		return typ, true
 	}
 	return token.Unknown, false
